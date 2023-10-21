@@ -1,0 +1,34 @@
+/**
+ * Blink the default LED on the
+ * <a href="https://www.pololu.com/docs/0J86">Pololu 3pi+ 2040 robot</a>.
+ * @author Abhi Gundrala
+ * @author Edward A. Lee
+ */
+target C {
+  platform: {
+    name: "rp2040",
+    board: "pololu_3pi_2040_robot"
+  },
+  threading: false,
+}
+
+preamble {=
+  #include <stdio.h>
+  #include <pico/stdlib.h>
+  #include <hardware/gpio.h>
+=}
+
+main reactor {
+  timer t(0, 250 ms);
+  state led_on:bool = false;
+
+  reaction(startup) {=
+    gpio_init(PICO_DEFAULT_LED_PIN);
+    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
+  =}
+  reaction(t) {=
+    self->led_on = !self->led_on;
+    printf("LED State: %b\n", self->led_on);
+    gpio_put(PICO_DEFAULT_LED_PIN, !self->led_on);
+  =}
+}
