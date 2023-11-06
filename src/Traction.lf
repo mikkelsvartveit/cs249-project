@@ -1,0 +1,38 @@
+/**
+ * Blink the default LED on the
+ * <a href="https://www.pololu.com/docs/0J86">Pololu 3pi+ 2040 robot</a>.
+ * @author Abhi Gundrala
+ * @author Edward A. Lee
+ */
+target C {
+  platform: {
+    name: "rp2040",
+    board: "pololu_3pi_2040_robot"
+  },
+  threading: false,
+}
+
+import Motors from "lib/Motors.lf"
+
+preamble {=
+  #include <stdio.h>
+  #include <pico/stdlib.h>
+  #include <hardware/gpio.h>
+=}
+
+main reactor {
+  timer t(500 ms, 500 ms);
+  m = new Motors()
+  state drive:bool = true;
+
+  reaction(t) -> m.left_power, m.right_power {=
+    if (self->drive) {
+      lf_set(m.left_power, 1.0);
+      lf_set(m.right_power, 1.0);
+      self->drive = false;
+    } else {
+      lf_set(m.left_power, 0.0);
+      lf_set(m.right_power, 0.0);
+    }
+  =}
+}
