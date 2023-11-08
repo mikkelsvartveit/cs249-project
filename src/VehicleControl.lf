@@ -1,0 +1,145 @@
+/**
+ * The MotorsWithFeedback reactor wraps the Motors reactor with feedback control.
+ * You specify the desired speed (in meters per second) on the `left_speed` and `right_speed` inputs
+ * and then provide the `left` and `right` encoder inputs.  For each encoder input, the controller
+ * updates the power input to each of the motors in an attempt to get the speed to match the desired
+ * speed.  This controller is proportional-integral (PI) controller with empirically chosen gains.
+ * It seems to work well with a sample period of about 50 ms.
+ * @author Abhi Gundrala
+ * @author Edward A. Lee
+ */
+ target C {
+    platform: {
+      name: "rp2040",
+      board: "pololu_3pi_2040_robot"
+    },
+    threading: false,
+  }
+
+
+
+import Encoders from "lib/Encoders.lf"
+import GyroAngle from "lib/IMU.lf"
+import MotorsWithFeedback from "lib/MotorsWithFeedback.lf"
+import Accelerometer from "lib/IMU.lf"
+import Display from "lib/Display.lf"
+
+preamble {=
+    #include <math.h>
+    #define MIN(a,b) ((a) < (b) ? (a) : (b))
+    #define MAX(x, y) (((x) > (y)) ? (x) : (y))
+=}
+  
+  reactor VehicleControl(p_gain: float = 0.1, i_gain: float = 0.0, d_gain: float = 0.0) {
+    // Desired speed.
+   
+    input vehicle_speed: float
+
+    encoder = new Encoders()
+    accel = new Accelerometer()
+    mwf = new MotorsWithFeedback()
+    gyro = new GyroAngle()
+    d = new Display()
+
+    timer outer_loop(500 ms, 50 ms)
+    timer inner_loop(500 ms, 10ms)
+
+    encoder.left -> mwf.left
+    encoder.right -> mwf.right
+    
+    //Temp drive state for debugging 
+    state drive: bool = true 
+    state error: float = 0.0
+    state accel_read: float = 0.0
+    state other_read: float = 0.0
+
+    state prev_time: time = 0
+    state prev_speed: float = 0.0
+    state target_speed: float = 0.0
+  
+    control_left = new PIDControl(p_gain=p_gain, i_gain=i_gain, d_gain=d_gain, sampling_rate=0.05)
+    control_right = new PIDControl(p_gain=p_gain, i_gain=i_gain, d_gain=d_gain, sampling_rate=0.05)
+
+    vehicle_speed -> control_left.target_v
+    vehicle_speed -> control_right.target_v
+    control_left.ctrl -> mwf.left_speed
+    control_right.ctrl -> mwf.right_speed
+
+    reaction(outer_loop) -> accel.trigger, gyro.trigger {=
+        lf_set(accel.trigger, true);
+        lf_set(gyro.trigger, true);
+    =}
+
+    reaction(inner_loop) -> encoder.trigger {=
+      lf_set(encoder.trigger, true);
+    =}
+  
+    reaction(vehicle_speed) {= self->target_speed = vehicle_speed->value;
+    =}
+
+    // React to encoder inputs.
+    reaction(accel.x) gyro.y -> control_left.err, control_right.err {=
+      // Ignore the first input because we can't estimate speed.
+      instant_t now = lf_time_logical();
+      if (self->prev_time > 0) {
+        interval_t interval = now - self->prev_time;
+  
+        // Ignore intervals that are too small. Assume a maximum sample rate of 1kHz.
+        if (interval >= MSEC(1)) {
+          float accel_reading = accel.x->value * 9.8;
+          self->accel_read = accel_reading;
+          self->other_read = sin(gyro.y->value / 360.0 * 2.0 * M_PI) * 9.8;
+          accel_reading += self->other_read;
+          float est_vehicle_speed = (accel_reading * (interval * 1e-9f)) + self->prev_speed;
+          est_vehicle_speed = MAX(MIN(est_vehicle_speed, 1.5), -1.5);
+        
+
+          float speed_error = self->target_speed - est_vehicle_speed;
+  
+          lf_set(control_left.err, speed_error);
+          lf_set(control_right.err, speed_error);
+          self->error = speed_error;
+          self->prev_speed = est_vehicle_speed;
+        }
+      }
+      self->prev_time = now;
+    =}
+
+    reaction(outer_loop) gyro.y -> d.line0, d.line1, d.line2 {=
+        /// TODO: define max string size for line
+        /// based on font you can have 4 or 8 lines 
+        static char buf0[17];
+        static char buf1[17];
+        static char buf2[17];
+        snprintf(buf0, 17, "t speed: %2.4f", self->target_speed);
+        snprintf(buf1, 17, "p speed: %2.4f", self->prev_speed);
+        snprintf(buf2, 17, "e speed: %2.4f", self->error);
+        lf_set(d.line0, buf0);
+        lf_set(d.line1, buf1);
+        lf_set(d.line2, buf2);
+    =}
+  }
+  
+  reactor PIDControl(p_gain: float = 1.0, i_gain: float = 1.0, d_gain: float = 1.0, sampling_rate: float = 0.01) {
+    input err: float
+    input target_v: float
+    output ctrl: float
+    state acum_err: float = 0.0
+    state prev_err: float = 0.0
+
+    reaction(err) target_v  -> ctrl {=
+      //instant_t now = lf_time_logical_elapsed();
+
+      self->acum_err += err->value * self->sampling_rate;
+      float error_derivative = (err->value - self->prev_err) / self->sampling_rate;
+      float output = err->value * self->p_gain +
+                  (self->acum_err) * self->i_gain + error_derivative * self->d_gain;
+      float limit = (target_v->value - err->value) * 1.1;
+      if (limit > 0.0) {
+        output = MIN(output, limit);
+      }
+      lf_set(ctrl, output);
+      
+    =}
+  }
+  

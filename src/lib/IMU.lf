@@ -22,6 +22,7 @@ target C {
 preamble {=
   #include <pico/stdlib.h>
   #include <imu.h>
+  #include <math.h>
 =}
 
 /**
@@ -62,9 +63,13 @@ reactor Accelerometer extends IMUBase {
     axes_data_t acc_data;
     imu_read_acc(&imu_instance, &acc_data);
 
-    lf_set(x, acc_data.x);
+    if (fabs(acc_data.x - 0.018) < 0.008) {
+      lf_set(x, 0);
+    } else {
+      lf_set(x, acc_data.x - 0.018);
+    }
     lf_set(y, acc_data.y);
-    lf_set(z, acc_data.z);   
+    lf_set(z, acc_data.z); 
   =}
 }
 
@@ -79,9 +84,24 @@ reactor Accelerometer extends IMUBase {
   reaction(trigger) -> x, y, z {=
     axes_data_t gyro_data;
     imu_read_gyro(&imu_instance, &gyro_data);
-    lf_set(x, gyro_data.x);
-    lf_set(y, gyro_data.y);
-    lf_set(z, gyro_data.z);
+    if (fabs(gyro_data.x - 0.20) < 0.2) {
+      lf_set(x, 0.0);
+    } else {
+      lf_set(x, gyro_data.x - 0.2);
+    }
+
+    if (fabs(gyro_data.y + 0.30) < 0.2) {
+      lf_set(y, 0.0);
+    } else {
+      lf_set(y, gyro_data.y + 0.3);
+    }
+
+    if (fabs(gyro_data.x - 0.10) < 0.2) {
+      lf_set(z, 0.0);
+    } else {
+      lf_set(z, gyro_data.z - 0.1);
+    }
+  
   =}
 }
 
