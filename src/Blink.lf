@@ -7,15 +7,15 @@
 target C {
   platform: {
     name: "rp2040",
-    board: "pololu_3pi_2040_robot"
+    board: "pico_w"
   },
-  threading: false,
 }
 
 preamble {=
   #include <stdio.h>
   #include <pico/stdlib.h>
   #include <hardware/gpio.h>
+  #include "/home/foobar/pico-sdk/src/rp2_common/pico_cyw43_arch/include/pico/cyw43_arch.h"
 =}
 
 main reactor {
@@ -23,12 +23,18 @@ main reactor {
   state led_on:bool = false;
 
   reaction(startup) {=
-    gpio_init(PICO_DEFAULT_LED_PIN);
-    gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
+    stdio_init_all();
+    // gpio_init(6);
+    // gpio_set_dir(6, GPIO_OUT);
+    if (cyw43_arch_init()) {
+      printf("Wi-fi init failed");
+    }
   =}
   reaction(t) {=
     self->led_on = !self->led_on;
-    printf("LED State: %b\n", self->led_on);
-    gpio_put(PICO_DEFAULT_LED_PIN, !self->led_on);
+    // printf("LED State: %b\n", self->led_on);
+    // gpio_put(6, !self->led_on);
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, !self->led_on);
+
   =}
 }
