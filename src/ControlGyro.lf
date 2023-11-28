@@ -13,19 +13,27 @@ import GyroAngle from "lib/IMU.lf"
 import MotorsWithFeedback from "lib/MotorsWithFeedback.lf"
 import Motors from "lib/Motors.lf"
 import Accelerometer from "lib/IMU.lf"
+import Gyro from "lib/IMU.lf"
 import Display from "lib/Display.lf"
 
 preamble {=
-  #include <math.h> 
+  #include <math.h>
 =}
 
 reactor GyroControl {
+
+  preamble {=
+    const float K_ERROR = 0.4;
+    const float K_D = 0.005;
+  =}
+
     input vehicle_speed: float
     encoder = new Encoders()
     accel = new Accelerometer()
     mwf = new MotorsWithFeedback()
     m = new Motors()
     gyro = new GyroAngle()
+    gyrov = new Gyro()
     d = new Display()
 
     timer t (0, 1 ms)
@@ -33,9 +41,10 @@ reactor GyroControl {
     encoder.left -> mwf.left;
     encoder.right -> mwf.right;
 
-    reaction(t) -> encoder.trigger, gyro.trigger {=
+    reaction(t) -> encoder.trigger, gyro.trigger, gyrov.trigger {=
       lf_set(encoder.trigger, true);
       lf_set(gyro.trigger, true);
+      lf_set(gyrov.trigger, true);
     =}
 
     reaction(startup) vehicle_speed -> m.left_power, m.right_power {=      
@@ -43,12 +52,12 @@ reactor GyroControl {
       lf_set(m.right_power, vehicle_speed->value);
     =}
     
-    reaction(gyro.y, gyro.x, gyro.z) vehicle_speed -> m.left_power, m.right_power{=
+    reaction(gyro.y, gyro.x, gyro.z, gyrov.z) vehicle_speed -> m.left_power, m.right_power{=
         if (gyro.z->value > 0.1) {
           lf_set(m.left_power, vehicle_speed->value * (1.0 - 0.01 * fabs(gyro.z->value)));
-          lf_set(m.right_power, vehicle_speed->value * (1.0 - 0.04 * fabs(gyro.z->value)));
+          lf_set(m.right_power, vehicle_speed->value * (1.0 - K_ERROR * fabs(gyro.z->value)) - K_D * gyrov.z->value);
         } else if (gyro.z->value < -0.1) {
-          lf_set(m.left_power, vehicle_speed->value * (1.0 - 0.04 * fabs(gyro.z->value)));
+          lf_set(m.left_power, vehicle_speed->value * (1.0 - K_ERROR * fabs(gyro.z->value)) + K_D * gyrov.z->value);
           lf_set(m.right_power, vehicle_speed->value * (1.0 - 0.01 * fabs(gyro.z->value)));
         } else {
           lf_set(m.left_power, vehicle_speed->value);
