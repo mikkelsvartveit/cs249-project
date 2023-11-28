@@ -1,0 +1,61 @@
+target C {
+    platform: {
+      name: "rp2040",
+      board: "pololu_3pi_2040_robot"
+    },
+    threading: false,
+  }
+
+
+
+import Encoders from "lib/Encoders.lf"
+import GyroAngle from "lib/IMU.lf"
+import MotorsWithFeedback from "lib/MotorsWithFeedback.lf"
+import Motors from "lib/Motors.lf"
+import Accelerometer from "lib/IMU.lf"
+import Display from "lib/Display.lf"
+
+preamble {=
+  #include <math.h> 
+=}
+
+reactor GyroControl {
+    input vehicle_speed: float
+    encoder = new Encoders()
+    accel = new Accelerometer()
+    mwf = new MotorsWithFeedback()
+    m = new Motors()
+    gyro = new GyroAngle()
+    d = new Display()
+
+    timer t (0, 1 ms)
+    
+    encoder.left -> mwf.left;
+    encoder.right -> mwf.right;
+
+    reaction(t) -> encoder.trigger, gyro.trigger {=
+      lf_set(encoder.trigger, true);
+      lf_set(gyro.trigger, true);
+    =}
+
+    reaction(startup) vehicle_speed -> m.left_power, m.right_power {=      
+      lf_set(m.left_power, vehicle_speed->value);
+      lf_set(m.right_power, vehicle_speed->value);
+    =}
+    
+    reaction(gyro.y, gyro.x, gyro.z) vehicle_speed -> m.left_power, m.right_power{=
+        if (gyro.z->value > 0.1) {
+          lf_set(m.left_power, vehicle_speed->value * (1.0 - 0.01 * fabs(gyro.z->value)));
+          lf_set(m.right_power, vehicle_speed->value * (1.0 - 0.04 * fabs(gyro.z->value)));
+        } else if (gyro.z->value < -0.1) {
+          lf_set(m.left_power, vehicle_speed->value * (1.0 - 0.04 * fabs(gyro.z->value)));
+          lf_set(m.right_power, vehicle_speed->value * (1.0 - 0.01 * fabs(gyro.z->value)));
+        } else {
+          lf_set(m.left_power, vehicle_speed->value);
+          lf_set(m.right_power, vehicle_speed->value);
+        }
+
+    =}
+
+
+}

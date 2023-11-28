@@ -68,6 +68,7 @@ reactor Accelerometer extends IMUBase {
     } else {
       lf_set(x, acc_data.x - 0.018);
     }
+    
     lf_set(y, acc_data.y);
     lf_set(z, acc_data.z); 
   =}
@@ -96,10 +97,10 @@ reactor Accelerometer extends IMUBase {
       lf_set(y, gyro_data.y + 0.3);
     }
 
-    if (fabs(gyro_data.x - 0.10) < 0.2) {
+    if (fabs(gyro_data.z - 0.40) < 0.2) {
       lf_set(z, 0.0);
     } else {
-      lf_set(z, gyro_data.z - 0.1);
+      lf_set(z, gyro_data.z - 0.4);
     }
   
   =}

@@ -22,7 +22,7 @@ main reactor {
   display = new Display()
   gyro = new GyroAngle()
 
-  timer t(0, 100ms)
+  timer t(0, 10 ms)
 
   reaction(t) -> gyro.trigger {=
     lf_set(gyro.trigger, true);

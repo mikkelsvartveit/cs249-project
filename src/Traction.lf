@@ -12,7 +12,7 @@ target C {
   threading: false,
 }
 
-import VehicleControl from "VehicleControl.lf"
+import GyroControl from "ControlGyro.lf"
 
 preamble {=
   #include <stdio.h>
@@ -21,16 +21,20 @@ preamble {=
 =}
 
 main reactor {
-  timer t(500 ms, 500 ms);
-  vc = new VehicleControl()
-  state drive:bool = true;
- 
-  reaction(t) -> vc.vehicle_speed {=
-    if (self->drive) {
-      lf_set(vc.vehicle_speed, 0.1);
+  
+  timer t(1000 ms , 1000 ms);
+  cg = new GyroControl()
+
+  state drive:bool = true
+  reaction(t) -> cg.vehicle_speed {=
+    if (self->drive == true) {
+      lf_set(cg.vehicle_speed, 1.0f);
       self->drive = false;
     } else {
-      lf_set(vc.vehicle_speed, 0);
+      lf_set(cg.vehicle_speed, 0.0f);
     }
+  
   =}
+  
+  
 }
