@@ -12,7 +12,7 @@ target C {
   threading: false
 }
 
-import GyroControl from "ControlGyro.lf"
+import Motors from "lib/Motors.lf"
 
 preamble {=
   #include <stdio.h>
@@ -22,16 +22,17 @@ preamble {=
 
 main reactor {
   timer t(1000 ms, 1000 ms)
-  gc = new GyroControl()
-
+  m = new Motors()
   state drive: bool = true
 
-  reaction(t) -> gc.vehicle_speed {=
-    if (self->drive == true) {
-      lf_set(gc.vehicle_speed, 1.0f);
+  reaction(t) -> m.left_power, m.right_power {=
+    if (self->drive) {
+      lf_set(m.left_power, 1.0);
+      lf_set(m.right_power, 1.0);
       self->drive = false;
     } else {
-      lf_set(gc.vehicle_speed, 0.0f);
+      lf_set(m.left_power, 0.0);
+      lf_set(m.right_power, 0.0);
     }
   =}
 }
