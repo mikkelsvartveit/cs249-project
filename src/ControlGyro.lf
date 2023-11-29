@@ -8,6 +8,7 @@ target C {
 
 import Encoders from "lib/Encoders.lf"
 import GyroAngle from "lib/IMU.lf"
+import Gyro from "lib/IMU.lf"
 import Motors from "lib/Motors.lf"
 import Accelerometer from "lib/IMU.lf"
 import Display from "lib/Display.lf"
@@ -22,31 +23,23 @@ reactor GyroControl {
   accel = new Accelerometer()
   m = new Motors()
   gyro = new GyroAngle()
+  gyrov = new Gyro()
   d = new Display()
 
   timer t(0, 1 ms)
 
-  reaction(t) -> encoder.trigger, gyro.trigger {=
+  reaction(t) -> gyro.trigger, gyrov.trigger {=
     lf_set(gyro.trigger, true);
+    lf_set(gyrov.trigger, true);
   =}
 
   reaction(startup) vehicle_speed -> m.left_power, m.right_power {=
     lf_set(m.left_power, vehicle_speed->value);
-          lf_set(m.right_power, vehicle_speed->value);
+    lf_set(m.right_power, vehicle_speed->value);
   =}
 
-  reaction(gyro.y, gyro.x, gyro.z) vehicle_speed -> m.left_power, m.right_power {=
-    // double gyro_z_squared_with_sign = gyro.z->value < 0 ? -pow(fabs(gyro.z->value), 1) : pow(gyro.z->value, 1);
-
-    lf_set(m.left_power, vehicle_speed->value * (1.0 + 0.03 * gyro.z->value));
-    lf_set(m.right_power, vehicle_speed->value * (1.0 - 0.03 * gyro.z->value));
-    // if (gyro.z->value > 0.1) {
-    // } else if (gyro.z->value < -0.1) {
-    //   lf_set(m.left_power, vehicle_speed->value * (1.0 - 0.04 * fabs(gyro.z->value)));
-    //   lf_set(m.right_power, vehicle_speed->value * (1.0 - 0.01 * fabs(gyro.z->value)));
-    // } else {
-    //   lf_set(m.left_power, vehicle_speed->value);
-    //   lf_set(m.right_power, vehicle_speed->value);
-    // }
+  reaction(gyrov.z, gyro.z) vehicle_speed -> m.left_power, m.right_power {=
+    lf_set(m.left_power, vehicle_speed->value * (1.0 + 0.003 * gyrov.z->value + 0.03 * gyro.z->value));
+    lf_set(m.right_power, vehicle_speed->value * (1.0 - 0.003 * gyrov.z->value - 0.03 * gyro.z->value));
   =}
 }
