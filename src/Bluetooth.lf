@@ -1,0 +1,38 @@
+/**
+ * Blink the default LED on the
+ * <a href="https://www.pololu.com/docs/0J86">Pololu 3pi+ 2040 robot</a>.
+ * @author Abhi Gundrala
+ * @author Edward A. Lee
+ */
+ target C {
+    platform: {
+      name: "rp2040",
+      board: "pololu_3pi_2040_robot"
+    },
+    threading: false,
+  }
+  
+  preamble {=
+    #include <stdio.h>
+    #include <pico/stdlib.h>
+    #include <hardware/uart.h>
+
+    #define UART_ID uart0
+    #define BAUD_RATE 115200
+
+    #define UART_TX_PIN 28
+    #define UART_RX_PIN 29
+  =}
+  
+  main reactor {
+    timer t(0, 1s);
+    reaction(startup) {=
+      uart_init(UART_ID, BAUD_RATE);
+      gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
+      gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+    =}
+    reaction(t) {=
+      uart_putc_raw(UART_ID, 'A');
+    =}
+  }
+  
