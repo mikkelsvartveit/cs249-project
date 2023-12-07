@@ -8,7 +8,7 @@ try:
     print("Connected to HC-05\n")
 
     # Sending a test message
-    message = "Message from Mac!\n"
+    message = "0\n"
     print("Sending message:", message)
     bluetooth_serial.write(message.encode())
 

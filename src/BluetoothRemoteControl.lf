@@ -1,0 +1,65 @@
+/**
+ * Blink the default LED on the
+ * <a href="https://www.pololu.com/docs/0J86">Pololu 3pi+ 2040 robot</a>.
+ * @author Abhi Gundrala
+ * @author Edward A. Lee
+ */
+target C {
+  platform: {
+    name: "rp2040",
+    board: "pololu_3pi_2040_robot"
+  },
+  threading: false
+}
+
+import GyroControl from "ControlGyro.lf"
+
+preamble {=
+  #include <stdio.h>
+  #include <pico/stdlib.h>
+  #include <hardware/uart.h>
+  #include <hardware/gpio.h>
+
+  #define UART_ID uart0
+  #define BAUD_RATE 9600
+
+  #define UART_TX_PIN 28
+  #define UART_RX_PIN 29
+=}
+
+main reactor {
+  timer t(10 ms, 10 ms)
+  gc = new GyroControl()
+
+  reaction(startup) {=
+    // Initialize standard input/output
+    stdio_init_all();
+
+    // Set up UART with the required baud rate.
+    uart_init(UART_ID, BAUD_RATE);
+
+    // Set the TX and RX pins by using the function from the GPIO library
+    gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+  =}
+
+  reaction(t) -> gc.vehicle_speed {=
+    // lf_set(gc.vehicle_speed, 0.1f);
+
+    // Buffer for incoming data
+    uint8_t buffer[256];
+
+    if (uart_is_readable(UART_ID)) {
+        int len = uart_is_readable(UART_ID);
+        uart_read_blocking(UART_ID, buffer, len);
+
+        if (buffer[0] == '1') {
+        lf_set(gc.vehicle_speed, 0.1f);
+        } else if (buffer[0] == '0') {
+        lf_set(gc.vehicle_speed, 0.0f);
+        }
+
+        uart_write_blocking(UART_ID, buffer, len); // Echo back what was received
+    }
+  =}
+}
