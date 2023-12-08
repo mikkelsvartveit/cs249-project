@@ -21,12 +21,12 @@ try:
             break
 
         # Wait for response
-        while bluetooth_serial.inWaiting() <= 0:
-            continue
+        # while bluetooth_serial.inWaiting() <= 0:
+        #     continue
 
-        # Receiving response
-        incoming = bluetooth_serial.readline().decode()
-        print("Received message:", incoming)
+        # # Receiving response
+        # incoming = bluetooth_serial.readline().decode()
+        # print("Received message:", incoming)
 
 except serial.SerialException as e:
     print(f"Error connecting to {serial_port}: {e}")

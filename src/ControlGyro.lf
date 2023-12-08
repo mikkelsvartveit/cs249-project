@@ -14,7 +14,7 @@ preamble {=
   #include <math.h>
 =}
 
-reactor GyroControl {
+reactor GyroControl(use_control: bool = true) {
   preamble {=
     const static float BIAS = 0.2f;
   =}
@@ -50,6 +50,11 @@ reactor GyroControl {
       lf_set(m.right_power, vehicle_speed->value - BIAS);
       self->prev_yaw = gyro.z->value;
     } else {
+      if (!self->use_control) {
+        lf_set(m.left_power, vehicle_speed->value);
+        lf_set(m.right_power, vehicle_speed->value);
+        return;
+      }
       float curr_yaw = gyro.z->value - self->prev_yaw;
       float yaw_velocity = angular_velocity.z->value;
       if (vehicle_speed->value < 0.0) {

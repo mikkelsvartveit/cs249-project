@@ -29,10 +29,10 @@ preamble {=
 
 main reactor {
   preamble {=
-    const static float SPEED_VAL = 0.2f;
+    const static float SPEED_VAL = 0.7f;
   =}
   timer t(10 ms, 10 ms)
-  gc = new GyroControl()
+  gc = new GyroControl(use_control=false)
   state prev_speed: float = 0
 
   reaction(startup) {=
@@ -50,7 +50,7 @@ main reactor {
   reaction(t) -> gc.vehicle_speed, gc.turn_left, gc.turn_right {=
 
     // Buffer for incoming data
-    uint8_t buffer[256];
+    uint8_t buffer[32];
 
     if (uart_is_readable(UART_ID)) {
         int len = uart_is_readable(UART_ID);
@@ -80,8 +80,6 @@ main reactor {
           lf_set(gc.turn_left, false);
           lf_set(gc.turn_right, false);
         }
-
-        uart_write_blocking(UART_ID, buffer, len); // Echo back what was received
     }
   =}
 }
