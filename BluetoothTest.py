@@ -1,4 +1,5 @@
 import serial
+import keyboard
 
 serial_port = "/dev/tty.HC-05"
 baud_rate = 9600
@@ -9,16 +10,23 @@ try:
 
     # Sending a test message
     message = "0\n"
-    print("Sending message:", message)
-    bluetooth_serial.write(message.encode())
 
-    # Wait for response
-    while bluetooth_serial.inWaiting() <= 0:
-        continue
+    while True:
 
-    # Receiving response
-    incoming = bluetooth_serial.readline().decode()
-    print("Received message:", incoming)
+        message = keyboard.read_key()
+        if (message == 'w' or message == 's' or message == 's' or message == 'a'):
+            print("Sending message:", message)
+            bluetooth_serial.write(message.encode())
+
+            # Wait for response
+            while bluetooth_serial.inWaiting() <= 0:
+                continue
+
+            # Receiving response
+            incoming = bluetooth_serial.readline().decode()
+            print("Received message:", incoming)
+        elif (message == 'q'):
+            break
 
 except serial.SerialException as e:
     print(f"Error connecting to {serial_port}: {e}")
