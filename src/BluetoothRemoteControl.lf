@@ -28,8 +28,12 @@ preamble {=
 =}
 
 main reactor {
+  preamble {=
+    const static float SPEED_VAL = 0.2f;
+  =}
   timer t(10 ms, 10 ms)
   gc = new GyroControl()
+  state prev_speed: float = 0
 
   reaction(startup) {=
     // Initialize standard input/output
@@ -43,8 +47,7 @@ main reactor {
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
   =}
 
-  reaction(t) -> gc.vehicle_speed {=
-    // lf_set(gc.vehicle_speed, 0.1f);
+  reaction(t) -> gc.vehicle_speed, gc.turn_left, gc.turn_right {=
 
     // Buffer for incoming data
     uint8_t buffer[256];
@@ -53,13 +56,33 @@ main reactor {
         int len = uart_is_readable(UART_ID);
         uart_read_blocking(UART_ID, buffer, len);
 
-        if (buffer[0] == '1') {
-        lf_set(gc.vehicle_speed, 0.1f);
-        } else if (buffer[0] == '0') {
-        lf_set(gc.vehicle_speed, 0.0f);
+        if (buffer[0] == 'w') {
+          lf_set(gc.vehicle_speed, SPEED_VAL);
+          self->prev_speed = SPEED_VAL;
+          lf_set(gc.turn_left, false);
+          lf_set(gc.turn_right, false);
+        } else if (buffer[0] == 'a') {
+          lf_set(gc.vehicle_speed, self->prev_speed);
+          lf_set(gc.turn_left, true);
+          lf_set(gc.turn_right, false);
+        } else if (buffer[0] == 's') {
+          lf_set(gc.vehicle_speed, -SPEED_VAL);
+          self->prev_speed = -SPEED_VAL;
+          lf_set(gc.turn_left, false);
+          lf_set(gc.turn_right, false);
+        } else if (buffer[0] == 'd') {
+          lf_set(gc.vehicle_speed, self->prev_speed);
+          lf_set(gc.turn_left, false);
+          lf_set(gc.turn_right, true);
+        } else {
+          lf_set(gc.vehicle_speed, 0.0f);
+          self->prev_speed = 0.0f;
+          lf_set(gc.turn_left, false);
+          lf_set(gc.turn_right, false);
         }
 
         uart_write_blocking(UART_ID, buffer, len); // Echo back what was received
+        memset(buffer, 0, sizeof buffer);
     }
   =}
 }

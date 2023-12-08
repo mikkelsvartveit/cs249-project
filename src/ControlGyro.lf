@@ -6,40 +6,53 @@ target C {
   threading: false
 }
 
-import Encoders from "lib/Encoders.lf"
 import GyroAngle from "lib/IMU.lf"
 import Gyro from "lib/IMU.lf"
 import Motors from "lib/Motors.lf"
-import Accelerometer from "lib/IMU.lf"
-import Display from "lib/Display.lf"
 
 preamble {=
   #include <math.h>
 =}
 
 reactor GyroControl {
+  preamble {=
+    const static float BIAS = 0.2f;
+  =}
   input vehicle_speed: float
-  encoder = new Encoders()
-  accel = new Accelerometer()
+  input turn_left:bool
+  input turn_right:bool
+  state prev_yaw:float
+
   m = new Motors()
   gyro = new GyroAngle()
-  gyrov = new Gyro()
-  d = new Display()
+  angular_velocity = new Gyro()
 
   timer t(0, 1 ms)
 
-  reaction(t) -> gyro.trigger, gyrov.trigger {=
+  reaction(t) -> gyro.trigger, angular_velocity.trigger {=
     lf_set(gyro.trigger, true);
-    lf_set(gyrov.trigger, true);
+    lf_set(angular_velocity.trigger, true);
   =}
 
-  reaction(startup) vehicle_speed -> m.left_power, m.right_power {=
+  reaction(startup) vehicle_speed, gyro.z -> m.left_power, m.right_power {=
     lf_set(m.left_power, vehicle_speed->value);
     lf_set(m.right_power, vehicle_speed->value);
+    self->prev_yaw = gyro.z->value;
   =}
 
-  reaction(gyrov.z, gyro.z) vehicle_speed -> m.left_power, m.right_power {=
-    lf_set(m.left_power, vehicle_speed->value * (1.0 + 0.003 * gyrov.z->value + 0.03 * gyro.z->value));
-    lf_set(m.right_power, vehicle_speed->value * (1.0 - 0.003 * gyrov.z->value - 0.03 * gyro.z->value));
+  reaction(angular_velocity.z, gyro.z) vehicle_speed, turn_left, turn_right -> m.left_power, m.right_power {=
+    if (turn_left->value) {
+      lf_set(m.left_power, vehicle_speed->value - BIAS);
+      lf_set(m.right_power, vehicle_speed->value);
+      self->prev_yaw = gyro.z->value;
+    } else if (turn_right->value) {
+      lf_set(m.left_power, vehicle_speed->value);
+      lf_set(m.right_power, vehicle_speed->value - BIAS);
+      self->prev_yaw = gyro.z->value;
+    } else {
+      float curr_yaw = gyro.z->value - self->prev_yaw;
+      lf_set(m.left_power, vehicle_speed->value * (1.0 + 0.003 * angular_velocity.z->value + 0.03 * curr_yaw));
+      lf_set(m.right_power, vehicle_speed->value * (1.0 - 0.003 * angular_velocity.z->value - 0.03 * curr_yaw));
+    }
   =}
 }
