@@ -51,8 +51,13 @@ reactor GyroControl {
       self->prev_yaw = gyro.z->value;
     } else {
       float curr_yaw = gyro.z->value - self->prev_yaw;
-      lf_set(m.left_power, vehicle_speed->value * (1.0 + 0.003 * angular_velocity.z->value + 0.03 * curr_yaw));
-      lf_set(m.right_power, vehicle_speed->value * (1.0 - 0.003 * angular_velocity.z->value - 0.03 * curr_yaw));
+      float yaw_velocity = angular_velocity.z->value;
+      if (vehicle_speed->value < 0.0) {
+        curr_yaw = -curr_yaw;
+        yaw_velocity = -yaw_velocity;
+      }
+      lf_set(m.left_power, vehicle_speed->value * (1.0 + 0.003 * yaw_velocity + 0.03 * curr_yaw));
+      lf_set(m.right_power, vehicle_speed->value * (1.0 - 0.003 * yaw_velocity - 0.03 * curr_yaw));
     }
   =}
 }

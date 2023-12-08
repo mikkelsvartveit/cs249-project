@@ -14,7 +14,7 @@ try:
     while True:
 
         message = keyboard.read_key()
-        if (message == 'w' or message == 'd' or message == 's' or message == 'a'):
+        if (message == 'w' or message == 'd' or message == 's' or message == 'a' or message == 'f'):
             print("Sending message:", message)
             bluetooth_serial.write(message.encode())
         elif (message == 'q'):
