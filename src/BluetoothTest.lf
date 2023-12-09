@@ -14,6 +14,7 @@ target C {
 
 preamble {=
   #include <stdio.h>
+  #include <string.h>
   #include <pico/stdlib.h>
   #include <hardware/uart.h>
   #include <hardware/gpio.h>
@@ -46,7 +47,11 @@ main reactor {
         if (uart_is_readable(UART_ID)) {
             int len = uart_is_readable(UART_ID);
             uart_read_blocking(UART_ID, buffer, len);
-            uart_write_blocking(UART_ID, buffer, len); // Echo back what was received
+
+            strncat((char *)buffer, " Your Text Here", sizeof(buffer) - strlen((char *)buffer) - 1);
+            int newLen = strlen((char *)buffer);
+            uart_write_blocking(UART_ID, buffer, newLen); // Echo back what was received
+            memset(buffer, 0, sizeof(buffer));
         }
     }
   =}
