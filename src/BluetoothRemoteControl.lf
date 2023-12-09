@@ -11,7 +11,7 @@ target C {
   },
   threading: false
 }
-
+import Display from "lib/Display.lf"
 import GyroControl from "ControlGyro.lf"
 
 preamble {=
@@ -29,13 +29,16 @@ preamble {=
 
 main reactor {
   preamble {=
-    const static float SPEED_VAL = 0.7f;
+    const static float SPEED_VAL = 0.1f;
   =}
-  timer t(10 ms, 10 ms)
+  display = new Display()
   gc = new GyroControl(use_control=false)
+
+  timer t(10 ms, 10 ms)
   state prev_speed: float = 0
 
-  reaction(startup) {=
+  reaction(startup) -> display.line0{=
+    lf_set(display.line0, "Starting up...");
     // Initialize standard input/output
     stdio_init_all();
 
@@ -47,33 +50,42 @@ main reactor {
     gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
   =}
 
-  reaction(t) -> gc.vehicle_speed, gc.turn_left, gc.turn_right {=
+  reaction(t) -> gc.vehicle_speed, gc.turn_left, gc.turn_right, display.line0 {=
 
     // Buffer for incoming data
     uint8_t buffer[32];
+    // Buffer to store data to display
+    static char disp_buf[17];
 
     if (uart_is_readable(UART_ID)) {
         int len = uart_is_readable(UART_ID);
         uart_read_blocking(UART_ID, buffer, len);
+        snprintf(disp_buf, 17, "Received: %c", buffer[0]);
+        lf_set(display.line0, disp_buf);
+
 
         if (buffer[0] == 'w') {
           lf_set(gc.vehicle_speed, SPEED_VAL);
           self->prev_speed = SPEED_VAL;
           lf_set(gc.turn_left, false);
           lf_set(gc.turn_right, false);
+
         } else if (buffer[0] == 'a') {
           lf_set(gc.vehicle_speed, self->prev_speed);
           lf_set(gc.turn_left, true);
           lf_set(gc.turn_right, false);
+
         } else if (buffer[0] == 's') {
           lf_set(gc.vehicle_speed, -SPEED_VAL);
           self->prev_speed = -SPEED_VAL;
           lf_set(gc.turn_left, false);
           lf_set(gc.turn_right, false);
+
         } else if (buffer[0] == 'd') {
           lf_set(gc.vehicle_speed, self->prev_speed);
           lf_set(gc.turn_left, false);
           lf_set(gc.turn_right, true);
+          
         } else if (buffer[0] == 'f') {
           lf_set(gc.vehicle_speed, 0.0f);
           self->prev_speed = 0.0f;
