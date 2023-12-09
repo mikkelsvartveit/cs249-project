@@ -29,13 +29,14 @@ preamble {=
 
 main reactor {
   preamble {=
-    const static float SPEED_VAL = 0.1f;
+    const static float SPEED_VAL = 0.4f;
   =}
   display = new Display()
   gc = new GyroControl(use_control=false)
 
   timer t(10 ms, 10 ms)
   state prev_speed: float = 0
+  state speed: float = 0.1
 
   reaction(startup) -> display.line0{=
     lf_set(display.line0, "Starting up...");
@@ -64,9 +65,10 @@ main reactor {
         lf_set(display.line0, disp_buf);
 
 
-        if (buffer[0] == 'w') {
-          lf_set(gc.vehicle_speed, SPEED_VAL);
-          self->prev_speed = SPEED_VAL;
+        if (buffer[0] == 's') {
+          lf_set(gc.vehicle_speed, self->speed);
+          //self->prev_speed = SPEED_VAL;
+          self->prev_speed = self->speed;
           lf_set(gc.turn_left, false);
           lf_set(gc.turn_right, false);
 
@@ -75,9 +77,10 @@ main reactor {
           lf_set(gc.turn_left, true);
           lf_set(gc.turn_right, false);
 
-        } else if (buffer[0] == 's') {
-          lf_set(gc.vehicle_speed, -SPEED_VAL);
-          self->prev_speed = -SPEED_VAL;
+        } else if (buffer[0] == 'w') {
+          //lf_set(gc.vehicle_speed, -SPEED_VAL);
+          lf_set(gc.vehicle_speed, -self->speed);
+          self->prev_speed = -self->speed;
           lf_set(gc.turn_left, false);
           lf_set(gc.turn_right, false);
 
@@ -91,7 +94,14 @@ main reactor {
           self->prev_speed = 0.0f;
           lf_set(gc.turn_left, false);
           lf_set(gc.turn_right, false);
+
+        } else if (buffer[0] == 'p') {
+          self->speed = self->speed + 0.1f;
+        } else if (buffer[0] == 'l') {
+          self->speed = self->speed - 0.1f;
         }
     }
+    // Skrive om til en som heller lytter til endringer så du kan endre hastighet live 
+    // og ikke bare når du trykker på en knapp
   =}
 }
