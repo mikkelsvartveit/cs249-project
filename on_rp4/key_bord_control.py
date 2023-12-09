@@ -28,7 +28,7 @@ def get_char():
 try:
     while True:
         message = get_char()
-        if message in ['w', 'd', 's', 'a', 'f']:
+        if message in ['w', 'd', 's', 'a', 'f', 'p', 'l']:
             print("Sending message:", message)
             ser.write(message.encode())
         elif message == 'q':
