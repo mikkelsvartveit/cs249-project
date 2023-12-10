@@ -1,110 +1,90 @@
-#!/usr/bin/env python3
-import math
 import cv2
 import numpy as np
 from picamera2 import Picamera2
+import utils
+from steering import Steer
+rou = 0
+curve_list = []
+avgVal1 = 10
 
-def calculate_slope(x1, y1, x2, y2):
-    """
-    Calculate the slope of a line given two points.
+def getLaneCure(img, display=2):
+    imgCopy = img.copy()
+    imgResult = img.copy()
+    # Step 1: Thresholding
+    imgThres = utils.thresholding(img)
+
+    # Step 2: Warp image
+    h, w, c = img.shape
+    points = utils.valTrackbars()
+    imgWarp = utils.warpImg(imgThres, points, w, h)
+    imgWarpPoints = utils.drawPoints(imgCopy, points)
+
+    # Step 3: Histogram
+    middel_point, imgHist = utils.getHistogram(imgWarp, display=True, minPer=0.4, region=4)
+    curve_average, imgHist = utils.getHistogram(imgWarp, display=True, minPer=0.6, region=1)
+    curve_raw = curve_average - middel_point
+
+    # Step 4: Get steering angle
+    curve_list.append(curve_raw)
+    # maintain fixed number of elements in list
+    if len(curve_list) > avgVal1:
+        curve_list.pop(0)
+    curve = int(sum(curve_list) / len(curve_list))
+
+    # Step 5: Display
+    if display != 0:
+        imgInvWarp = utils.warpImg(imgWarp, points, w, h, inv=True)
+        imgInvWarp = cv2.cvtColor(imgInvWarp, cv2.COLOR_GRAY2BGR)
+        imgInvWarp[0: h// 3, 0: w] = 0, 0, 0
+        imgLaneColor = np.zeros_like(img)
+        imgLaneColor[:] = 0, 255, 0
+        imgLaneColor = cv2.bitwise_and(imgInvWarp, imgLaneColor)
+        imgResult = cv2.addWeighted(imgResult, 1, imgLaneColor, 1, 0)
+        midY = 450
+        cv2.putText(imgResult, str(curve), (w//2-80, 85), cv2.FONT_HERSHEY_COMPLEX, 2, (255, 0, 255), 3)
+        cv2.line(imgResult, (w//2, midY), (w//2 + (curve*3), midY), (255, 0, 255), 5)
+        cv2.line(imgResult, ((w//2 + (curve*3)), midY - 25), (w//2 + (curve*3), midY + 25), (0, 255, 0), 5)
+        for x in range(-30, 30):
+            w1 = w//20
+            cv2.line(imgResult, (w1*x + int(curve//50), midY - 10),
+                     (w1*x + int(curve//50), midY + 10), (0, 0, 255), 2)
+        #fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer);
+        #cv2.putText(imgResult, 'FPS {}'.format(int(fps)), (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        if display == 2:
+            imgStacked = utils.stackImages(0.7, ([img, imgWarpPoints, imgWarp],
+                                                 [imgHist, imgLaneColor, imgResult]))
+            cv2.imshow('ImageStack', imgStacked)
+        elif display == 1:
+            cv2.imshow('Resutlt', imgResult)
     
-    Args:
-        x1, y1: Coordinates of the first point.
-        x2, y2: Coordinates of the second point.
+    # Step 6: Return curve value
+    curve = curve / 100
+    if curve > 1: curve == 1
+    if curve < -1: curve == -1
+    return curve
 
-    Returns:
-        float: The slope of the line in degrees.
-    """
-    if x2 - x1 == 0:  # Prevent division by zero
-        return float('inf')
-    slope = float(y2 - y1) / float(x2 - x1)
-    angle_radians = math.atan(slope)
-    return angle_radians * (180 / np.pi)
-
-def process_frame(frame):
-    """
-    Process the frame to prepare for line detection.
-    
-    Args:
-        frame (numpy.ndarray): The current video frame.
-
-    Returns:
-        numpy.ndarray: The thresholded frame.
-    """
-    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    equalized_frame = cv2.equalizeHist(gray_frame)
-    blurred_frame = cv2.GaussianBlur(equalized_frame, (5, 5), 0)
-    _, thresholded_frame = cv2.threshold(blurred_frame, 240, 255, cv2.THRESH_BINARY)
-    return thresholded_frame
-
-def main():
+if __name__ == '__main__':
+    steer = Steer()
+    steer.keyboard()
     picam2 = Picamera2()
     camera_config = picam2.create_preview_configuration()
     picam2.configure(camera_config)
     picam2.start()
-
-    is_left_turn = False
-    is_right_turn = False
-    is_straight = False
-
+    initialTrackbarVals = [93, 155, 0, 211]
+    utils.InitializeTrackbars(initialTrackbarVals)
     while True:
-        # Capture a frame using PiCamera2
-        frame = picam2.capture_array()
-        # Convert to a format OpenCV can use
-        frame = cv2.cvtColor(np.array(frame), cv2.COLOR_RGB2BGR)
-        frame = cv2.resize(frame, (600, 600))
-
-        thresholded_frame = process_frame(frame)
-
-        # Find contours
-        contours, _ = cv2.findContours(thresholded_frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-        # Draw contours
-        cv2.drawContours(thresholded_frame, contours, -1, (255, 0, 0), 3)
-
-        # Line detection
-        lines = cv2.HoughLinesP(thresholded_frame, 1, np.pi / 180, 25, minLineLength=10, maxLineGap=40)
-
-        left_count = right_count = 0
-        if lines is not None:
-            for line in lines:
-                for x1, y1, x2, y2 in line:
-                    line_angle = calculate_slope(x1, y1, x2, y2)
-                    if 250 < y1 < 600 and 250 < y2 < 600:
-                        if -80 <= line_angle <= -30:
-                            right_count += 1
-                            left_count = 0
-                            cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 2, cv2.LINE_AA)
-                        elif 30 <= line_angle <= 80:
-                            left_count += 1
-                            right_count = 0
-                            cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 2, cv2.LINE_AA)
-
-        # Determine direction
-        if left_count >= 10 and not is_left_turn:
-            print('left')
-            is_left_turn = True
-            is_right_turn = is_straight = False
-        elif right_count >= 10 and not is_right_turn:
-            print('right')
-            is_right_turn = True
-            is_left_turn = is_straight = False
-        elif left_count < 10 and right_count < 10 and not is_straight:
-            print('straight')
-            is_straight = True
-            is_left_turn = is_right_turn = False
-
-        # Display the frames
-        cv2.imshow('Thresholded Video', thresholded_frame)
-        cv2.imshow('Processed Video', frame)
-
-        # Break the loop with 'q'
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-    # Release resources
-    cv2.destroyAllWindows()
-    picam2.stop()
-
-if __name__ == '__main__':
-    main()
+        #success, img = cap.read()
+        img = picam2.capture_array()
+        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        img = cv2.resize(np.array(img), (480, 240))
+        curve = getLaneCure(img, display=1)
+        if curve < -0.3:
+            steer.turn_left()
+        elif curve > 0.3:
+            steer.turn_right()
+        else:
+            steer.forward()
+        print(curve)
+    
+        # TODO: implement keyboard override
+        cv2.waitKey(1)
