@@ -5,8 +5,8 @@ def thresholding(img):
     # convert to HSV space
     imgHsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     # apply range
-    lowerWhite = np.array([82, 40, 140])
-    upperWhite = np.array([250, 255, 255])
+    lowerWhite = np.array([60, 0, 0])
+    upperWhite = np.array([179, 255, 255])
     maskWhite = cv2.inRange(imgHsv, lowerWhite, upperWhite)
     return maskWhite
 
@@ -81,7 +81,7 @@ def getHistogram(img, minPer=0.1, display=True, region=1):
     return basePoints
 
 
-def stackImagesp(scale, imgArray):
+def stackImages(scale, imgArray):
     rows = len(imgArray)
     cols = len(imgArray[0])
     rowsAvailable = isinstance(imgArray[0], list)

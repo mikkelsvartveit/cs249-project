@@ -65,7 +65,7 @@ def getLaneCure(img, display=2):
 
 if __name__ == '__main__':
     steer = Steer()
-    steer.keyboard()
+    #steer.keyboard()
     picam2 = Picamera2()
     camera_config = picam2.create_preview_configuration()
     picam2.configure(camera_config)
@@ -77,12 +77,16 @@ if __name__ == '__main__':
         img = picam2.capture_array()
         img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
         img = cv2.resize(np.array(img), (480, 240))
-        curve = getLaneCure(img, display=1)
+        curve = getLaneCure(img, display=2)
+        print("kjør")
         if curve < -0.3:
+            #pass
             steer.turn_left()
         elif curve > 0.3:
+            #pass
             steer.turn_right()
         else:
+            #pass
             steer.forward()
         print(curve)
     
