@@ -81,7 +81,7 @@ def getHistogram(img, minPer=0.1, display=True, region=1):
     return basePoints
 
 
-def stackImages(scale, imgArray):
+def stackImagesp(scale, imgArray):
     rows = len(imgArray)
     cols = len(imgArray[0])
     rowsAvailable = isinstance(imgArray[0], list)
