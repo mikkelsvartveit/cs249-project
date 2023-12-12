@@ -17,7 +17,7 @@ preamble {=
 
 reactor GyroControl(use_control: bool = true) {
   preamble {=
-    const static float BIAS = 0.2f;
+    const static float BIAS = 0.05f;
   =}
   input vehicle_speed: float
   input turn_left: bool
@@ -53,12 +53,12 @@ reactor GyroControl(use_control: bool = true) {
     }
 
     if (turn_left->value) {
-      lf_set(m.left_power, vehicle_speed->value - BIAS);
-      lf_set(m.right_power, vehicle_speed->value);
+      lf_set(m.left_power, vehicle_speed->value);
+      lf_set(m.right_power, vehicle_speed->value + BIAS);
       self->prev_yaw = gyro.z->value;
     } else if (turn_right->value) {
-      lf_set(m.left_power, vehicle_speed->value);
-      lf_set(m.right_power, vehicle_speed->value - BIAS);
+      lf_set(m.left_power, vehicle_speed->value + BIAS);
+      lf_set(m.right_power, vehicle_speed->value);
       self->prev_yaw = gyro.z->value;
     } else {
       if (!self->use_control) {
