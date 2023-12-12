@@ -1,0 +1,120 @@
+/**
+ * Blink the default LED on the
+ * <a href="https://www.pololu.com/docs/0J86">Pololu 3pi+ 2040 robot</a>.
+ * @author Abhi Gundrala
+ * @author Edward A. Lee
+ */
+target C {
+  platform: {
+    name: "rp2040",
+    board: "pololu_3pi_2040_robot"
+  },
+  threading: false
+}
+
+import Display from "lib/Display.lf"
+import GyroControl from "ControlGyro.lf"
+
+preamble {=
+  #include <stdio.h>
+  #include <pico/stdlib.h>
+  #include <hardware/uart.h>
+  #include <hardware/gpio.h>
+
+  #define UART_ID uart0
+  #define BAUD_RATE 9600
+
+  #define UART_TX_PIN 28
+  #define UART_RX_PIN 29
+=}
+
+main reactor {
+  preamble {=
+    const static float SPEED_VAL = 1.0f;
+  =}
+  display = new Display()
+  gc = new GyroControl(use_control=true)
+
+  timer t(10 ms, 10 ms)
+  state prev_speed: float = 0
+  state speed: float = 1.0
+
+  state timer_counter: int = 0  // Variables used for stopping the robot after 1 second
+  state stop_at_count: int = 0
+
+  reaction(startup) -> display.line0 {=
+    lf_set(display.line0, "Starting up...");
+    // Initialize standard input/output
+    stdio_init_all();
+
+    // Set up UART with the required baud rate.
+    uart_init(UART_ID, BAUD_RATE);
+
+    // Set the TX and RX pins by using the function from the GPIO library
+    gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+  =}
+
+  reaction(t) -> gc.vehicle_speed, gc.turn_left, gc.turn_right, display.line0 {=
+    self->timer_counter++;
+
+    if (self->timer_counter == self->stop_at_count) {
+      lf_set(gc.vehicle_speed, 0.0f);
+      self->prev_speed = 0.0f;
+      lf_set(gc.turn_left, false);
+      lf_set(gc.turn_right, false);
+    }
+
+    // Buffer for incoming data
+    uint8_t buffer[32];
+    // Buffer to store data to display
+    static char disp_buf[17];
+
+    if (uart_is_readable(UART_ID)) {
+        self->stop_at_count = self->timer_counter + 100; // Stop after 1 second
+
+        int len = uart_is_readable(UART_ID);
+        uart_read_blocking(UART_ID, buffer, len);
+        snprintf(disp_buf, 17, "Received: %c", buffer[0]);
+        lf_set(display.line0, disp_buf);
+
+
+        if (buffer[0] == 's') {
+          lf_set(gc.vehicle_speed, -self->speed);
+          //self->prev_speed = SPEED_VAL;
+          self->prev_speed = -self->speed;
+          lf_set(gc.turn_left, false);
+          lf_set(gc.turn_right, false);
+
+        } else if (buffer[0] == 'a') {
+          lf_set(gc.vehicle_speed, self->prev_speed);
+          lf_set(gc.turn_left, true);
+          lf_set(gc.turn_right, false);
+
+        } else if (buffer[0] == 'w') {
+          //lf_set(gc.vehicle_speed, -SPEED_VAL);
+          lf_set(gc.vehicle_speed, self->speed);
+          self->prev_speed = self->speed;
+          lf_set(gc.turn_left, false);
+          lf_set(gc.turn_right, false);
+
+        } else if (buffer[0] == 'd') {
+          lf_set(gc.vehicle_speed, self->prev_speed);
+          lf_set(gc.turn_left, false);
+          lf_set(gc.turn_right, true);
+
+        } else if (buffer[0] == 'f') {
+          lf_set(gc.vehicle_speed, 0.0f);
+          self->prev_speed = 0.0f;
+          lf_set(gc.turn_left, false);
+          lf_set(gc.turn_right, false);
+        } else if (buffer[0] == 'p') {
+          self->speed = self->speed + 0.1f;
+        } else if (buffer[0] == 'l') {
+          self->speed = self->speed - 0.1f;
+        }
+    }
+    // Skrive om til en som heller lytter til endringer så du kan endre hastighet live
+    // og ikke bare når du trykker på en knapp
+  =}
+}
