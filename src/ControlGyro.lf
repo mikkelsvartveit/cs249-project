@@ -17,7 +17,7 @@ preamble {=
 
 reactor GyroControl(use_control: bool = true) {
   preamble {=
-    const static float BIAS = 0.05f;
+    const static float BIAS = 0.1f;
   =}
   input vehicle_speed: float
   input turn_left: bool
