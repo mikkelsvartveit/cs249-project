@@ -11,6 +11,7 @@ target C {
   },
   threading: false
 }
+
 import Display from "lib/Display.lf"
 import GyroControl from "ControlGyro.lf"
 
@@ -36,9 +37,9 @@ main reactor {
 
   timer t(10 ms, 10 ms)
   state prev_speed: float = 0
-  state speed: float = 0.1
+  state speed: float = 0.2
 
-  reaction(startup) -> display.line0{=
+  reaction(startup) -> display.line0 {=
     lf_set(display.line0, "Starting up...");
     // Initialize standard input/output
     stdio_init_all();
@@ -52,7 +53,6 @@ main reactor {
   =}
 
   reaction(t) -> gc.vehicle_speed, gc.turn_left, gc.turn_right, display.line0 {=
-
     // Buffer for incoming data
     uint8_t buffer[32];
     // Buffer to store data to display
@@ -88,7 +88,7 @@ main reactor {
           lf_set(gc.vehicle_speed, self->prev_speed);
           lf_set(gc.turn_left, false);
           lf_set(gc.turn_right, true);
-          
+
         } else if (buffer[0] == 'f') {
           lf_set(gc.vehicle_speed, 0.0f);
           self->prev_speed = 0.0f;
@@ -101,7 +101,7 @@ main reactor {
           self->speed = self->speed - 0.1f;
         }
     }
-    // Skrive om til en som heller lytter til endringer så du kan endre hastighet live 
+    // Skrive om til en som heller lytter til endringer så du kan endre hastighet live
     // og ikke bare når du trykker på en knapp
   =}
 }
