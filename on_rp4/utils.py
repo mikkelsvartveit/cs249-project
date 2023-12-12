@@ -5,8 +5,8 @@ def thresholding(img):
     # convert to HSV space
     imgHsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     # apply range
-    lowerWhite = np.array([60, 0, 0])
-    upperWhite = np.array([179, 255, 255])
+    lowerWhite = np.array([0, 0, 201])
+    upperWhite = np.array([179, 120, 255])
     maskWhite = cv2.inRange(imgHsv, lowerWhite, upperWhite)
     return maskWhite
 

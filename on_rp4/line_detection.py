@@ -5,7 +5,7 @@ import utils
 from steering import Steer
 rou = 0
 curve_list = []
-avgVal1 = 10
+avgVal1 = 4
 
 def getLaneCure(img, display=2):
     imgCopy = img.copy()
@@ -29,7 +29,7 @@ def getLaneCure(img, display=2):
     # maintain fixed number of elements in list
     if len(curve_list) > avgVal1:
         curve_list.pop(0)
-    curve = int(sum(curve_list) / len(curve_list))
+    curve = int(np.dot(np.array(curve_list),np.linspace(1, 0.6,len(curve_list))) / len(curve_list))
 
     # Step 5: Display
     if display != 0:
@@ -70,7 +70,7 @@ if __name__ == '__main__':
     camera_config = picam2.create_preview_configuration()
     picam2.configure(camera_config)
     picam2.start()
-    initialTrackbarVals = [93, 155, 0, 211]
+    initialTrackbarVals = [117, 91, 0, 211]
     utils.InitializeTrackbars(initialTrackbarVals)
     while True:
         #success, img = cap.read()
@@ -79,15 +79,15 @@ if __name__ == '__main__':
         img = cv2.resize(np.array(img), (480, 240))
         curve = getLaneCure(img, display=2)
         print("kjør")
-        if curve < -0.3:
-            #pass
+        if curve < -0.2:
             steer.turn_left()
-        elif curve > 0.3:
-            #pass
+            pass
+        elif curve > 0.2:
             steer.turn_right()
+            pass
         else:
-            #pass
             steer.forward()
+            pass
         print(curve)
     
         # TODO: implement keyboard override

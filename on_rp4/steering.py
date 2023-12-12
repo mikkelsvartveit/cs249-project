@@ -34,11 +34,11 @@ class Steer:
     
     def turn_left(self):
         self._send_command('a')
-        threading.Thread(target=self._send_command, args=('f',  0.2)).start()
+        # threading.Thread(target=self._send_command, args=('f',  0.2)).start()
     
     def turn_right(self):
         self._send_command('d')
-        threading.Thread(target=self._send_command, args=('f',  0.2)).start()
+        # threading.Thread(target=self._send_command, args=('f',  0.2)).start()
 
     def forward(self):
         self._send_command('w')
