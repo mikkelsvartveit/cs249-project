@@ -61,11 +61,7 @@ class Steer:
 
 if __name__ == '__main__':
     s = Steer()
-    s.forward()
-    time.sleep(1)
     s.stop()
-    time.sleep(1)
-    s.turn_right()
     s.keyboard()
     s.stop()
     #s.keyboard()

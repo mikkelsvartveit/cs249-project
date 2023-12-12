@@ -22,7 +22,12 @@ def getLaneCure(img, display=2):
     # Step 3: Histogram
     middel_point, imgHist = utils.getHistogram(imgWarp, display=True, minPer=0.4, region=4)
     curve_average, imgHist = utils.getHistogram(imgWarp, display=True, minPer=0.6, region=1)
-    curve_raw = curve_average - middel_point
+    middle_point = 240
+    left_img = imgWarp[:, :middle_point]
+    right_img = imgWarp[:, middle_point:]
+    left_count = len(left_img) - np.count_nonzero(left_img)
+    right_count = len(right_img) - np.count_nonzero(right_img)
+    curve_raw = (left_count - right_count) / (left_count + right_count)
 
     # Step 4: Get steering angle
     curve_list.append(curve_raw)
@@ -58,10 +63,10 @@ def getLaneCure(img, display=2):
             cv2.imshow('Resutlt', imgResult)
     
     # Step 6: Return curve value
-    curve = curve / 100
-    if curve > 1: curve == 1
-    if curve < -1: curve == -1
-    return curve
+    # curve = curve / 100
+    # if curve > 1: curve == 1
+    # if curve < -1: curve == -1
+    return curve_raw
 
 if __name__ == '__main__':
     steer = Steer()
@@ -79,11 +84,11 @@ if __name__ == '__main__':
         img = cv2.resize(np.array(img), (480, 240))
         curve = getLaneCure(img, display=2)
         print("kjør")
-        if curve < -0.2:
-            steer.turn_left()
-            pass
-        elif curve > 0.2:
+        if curve < -0.3:
             steer.turn_right()
+            pass
+        elif curve > 0.3:
+            steer.turn_left()
             pass
         else:
             steer.forward()
