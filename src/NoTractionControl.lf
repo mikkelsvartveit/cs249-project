@@ -21,7 +21,7 @@ preamble {=
 =}
 
 main reactor {
-  timer t(1000 ms, 1000 ms)
+  timer t(1000 ms, 500 ms)
   m = new Motors()
   state drive: bool = true
 

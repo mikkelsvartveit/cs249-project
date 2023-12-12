@@ -9,6 +9,7 @@ target C {
 import GyroAngle from "lib/IMU.lf"
 import Gyro from "lib/IMU.lf"
 import Motors from "lib/Motors.lf"
+import Display from "lib/Display.lf"
 
 preamble {=
   #include <math.h>
@@ -19,10 +20,12 @@ reactor GyroControl(use_control: bool = true) {
     const static float BIAS = 0.2f;
   =}
   input vehicle_speed: float
-  input turn_left:bool
-  input turn_right:bool
-  state prev_yaw:float
+  input turn_left: bool
+  input turn_right: bool
+  state prev_yaw: float
+  state max_yaw: float = 0.0
 
+  d = new Display()
   m = new Motors()
   gyro = new GyroAngle()
   angular_velocity = new Gyro()
@@ -40,7 +43,15 @@ reactor GyroControl(use_control: bool = true) {
     self->prev_yaw = gyro.z->value;
   =}
 
-  reaction(angular_velocity.z, gyro.z) vehicle_speed, turn_left, turn_right -> m.left_power, m.right_power {=
+  reaction(angular_velocity.z, gyro.z) vehicle_speed, turn_left, turn_right ->
+  m.left_power, m.right_power, d.line0 {=
+    if (fabs(gyro.z->value) > fabs(self->max_yaw) && vehicle_speed->value > 0.0) {
+      self->max_yaw = gyro.z->value;
+      static char buf0[17];
+      snprintf(buf0, 17, "z:%2.4f", self->max_yaw);
+      lf_set(d.line0, buf0);
+    }
+
     if (turn_left->value) {
       lf_set(m.left_power, vehicle_speed->value - BIAS);
       lf_set(m.right_power, vehicle_speed->value);

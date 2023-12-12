@@ -22,7 +22,7 @@ preamble {=
 
 main reactor {
   timer t(1000 ms, 1000 ms)
-  gc = new GyroControl()
+  gc = new GyroControl(use_control=true)
 
   state drive: bool = true
 
