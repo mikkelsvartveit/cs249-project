@@ -15,9 +15,9 @@ preamble {=
   #include <math.h>
 =}
 
-reactor GyroControl(use_control: bool = true) {
+reactor GyroControl(use_control: bool = false) {
   preamble {=
-    const static float BIAS = 0.05f;
+    const static float BIAS = 0.15f;
   =}
   input vehicle_speed: float
   input turn_left: bool

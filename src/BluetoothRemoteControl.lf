@@ -29,15 +29,12 @@ preamble {=
 =}
 
 main reactor {
-  preamble {=
-    const static float SPEED_VAL = 0.4f;
-  =}
   display = new Display()
-  gc = new GyroControl(use_control=false)
+  gc = new GyroControl(use_control=true)
 
   timer t(10 ms, 10 ms)
   state prev_speed: float = 0
-  state speed: float = 0.2
+  state speed: float = 0.3
 
   reaction(startup) -> display.line0 {=
     lf_set(display.line0, "Starting up...");
@@ -67,7 +64,6 @@ main reactor {
 
         if (buffer[0] == 's') {
           lf_set(gc.vehicle_speed, self->speed);
-          //self->prev_speed = SPEED_VAL;
           self->prev_speed = self->speed;
           lf_set(gc.turn_left, false);
           lf_set(gc.turn_right, false);
