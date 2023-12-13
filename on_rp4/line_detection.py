@@ -75,25 +75,28 @@ if __name__ == '__main__':
     camera_config = picam2.create_preview_configuration()
     picam2.configure(camera_config)
     picam2.start()
-    initialTrackbarVals = [117, 91, 0, 211]
+    initialTrackbarVals = [0, 0, 93, 240]
     utils.InitializeTrackbars(initialTrackbarVals)
-    while True:
-        #success, img = cap.read()
-        img = picam2.capture_array()
-        img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
-        img = cv2.resize(np.array(img), (480, 240))
-        curve = getLaneCure(img, display=2)
-        print("kjør")
-        if curve < -0.3:
-            steer.turn_right()
-            pass
-        elif curve > 0.3:
-            steer.turn_left()
-            pass
-        else:
-            steer.forward()
-            pass
-        print(curve)
-    
-        # TODO: implement keyboard override
-        cv2.waitKey(1)
+    try:
+        while True:
+            #success, img = cap.read()
+            img = picam2.capture_array()
+            img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+            img = cv2.resize(np.array(img), (480, 240))
+            curve = getLaneCure(img, display=2)
+            print("kjør")
+            if curve < -0.2:
+                steer.turn_right()
+                pass
+            elif curve > 0.2:
+                steer.turn_left()
+                pass
+            else:
+                steer.forward()
+                pass
+            print(curve)
+        
+            # TODO: implement keyboard override
+            cv2.waitKey(1)
+    except KeyboardInterrupt:
+        steer.stop()
